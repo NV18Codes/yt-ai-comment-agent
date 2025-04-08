@@ -1,84 +1,90 @@
 import streamlit as st
-import pandas as pd
-from googleapiclient.discovery import build
-from transformers import pipeline, set_seed, AutoTokenizer, AutoModelForCausalLM
+from yt_dlp import YoutubeDL
+from youtube_comment_downloader import YoutubeCommentDownloader
+from transformers import pipeline
 from textblob import TextBlob
+import pandas as pd
+import matplotlib.pyplot as plt
 
-# Load GPT-2 model using CPU
-model_name = "distilgpt2"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(model_name)
-generator = pipeline("text-generation", model=model, tokenizer=tokenizer, device=-1)
-set_seed(42)
+st.set_page_config(page_title="YouTube Comment AI Replier", layout="centered")
 
+st.markdown("## 🤖 YouTube Comment AI Replier")
 
-# YouTube API setup
-def get_youtube_comments(api_key, video_id, max_results=10):
-    youtube = build("youtube", "v3", developerKey=api_key)
-    comments = []
-    response = (
-        youtube.commentThreads()
-        .list(
-            part="snippet",
-            videoId=video_id,
-            maxResults=max_results,
-            textFormat="plainText",
-        )
-        .execute()
-    )
+url = st.text_input("📽️ Enter YouTube Video URL or Video ID", "")
+num_comments = st.slider("💬 Number of Comments", 5, 50, 10)
 
-    for item in response["items"]:
-        comment = item["snippet"]["topLevelComment"]["snippet"]["textDisplay"]
-        comments.append(comment)
-    return comments
+if st.button("✨ Generate AI Replies") and url:
+    try:
+        with st.spinner("Fetching video info..."):
+            ydl_opts = {"quiet": True}
+            with YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                video_title = info.get("title", "N/A")
+                video_description = info.get("description", "N/A")
 
+        st.success(f"🎥 Video Title: {video_title}")
+        st.info(f"📝 Description:\n{video_description[:300]}...")
 
-# Generate AI reply using GPT-2
-def generate_reply(comment):
-    prompt = f"User comment: {comment}\nAI reply:"
-    response = generator(prompt, max_length=60, num_return_sequences=1)
-    reply = response[0]["generated_text"].split("AI reply:")[-1].strip()
-    return reply
+        with st.spinner("🔍 Fetching comments..."):
+            downloader = YoutubeCommentDownloader()
+            comments_gen = downloader.get_comments_from_url(url, sort_by=0)
+            comments = []
+            for i, comment in enumerate(comments_gen):
+                if i >= num_comments:
+                    break
+                comments.append(comment["text"])
 
+        if comments:
+            st.success("✅ Comments fetched. Generating replies...")
 
-# Sentiment analysis using TextBlob
-def detect_sentiment(comment):
-    polarity = TextBlob(comment).sentiment.polarity
-    if polarity > 0:
-        return "Positive"
-    elif polarity < 0:
-        return "Negative"
-    else:
-        return "Neutral"
+            reply_model = pipeline("text-generation", model="distilgpt2")
+            replies = []
+            sentiments = []
 
-
-# Streamlit UI
-st.title("🎥 YouTube Comment AI Replier")
-
-api_key = st.text_input("🔑 Enter YouTube Data API Key", type="password")
-video_id = st.text_input("📹 Enter YouTube Video ID", value="dQw4w9WgXcQ")
-max_comments = st.slider("🔢 Number of Comments to Fetch", 1, 50, 10)
-
-if st.button("Generate AI Replies"):
-    with st.spinner("Fetching comments and generating replies..."):
-        try:
-            comments = get_youtube_comments(api_key, video_id, max_comments)
-            data = []
             for comment in comments:
-                reply = generate_reply(comment)
-                sentiment = detect_sentiment(comment)
-                data.append(
-                    {"Comment": comment, "Sentiment": sentiment, "AI Reply": reply}
-                )
+                try:
+                    sentiment_score = float(TextBlob(comment).sentiment.polarity)
+                    label = (
+                        "Positive"
+                        if sentiment_score > 0
+                        else "Negative" if sentiment_score < 0 else "Neutral"
+                    )
+                except Exception as e:
+                    sentiment_score = 0
+                    label = "Neutral"
 
-            df = pd.DataFrame(data)
-            st.success("✅ Done generating replies!")
-            st.dataframe(df)
+                reply = reply_model(
+                    f"Reply to: {comment}\n", max_length=50, num_return_sequences=1
+                )[0]["generated_text"]
+                replies.append(reply.strip())
+                sentiments.append(label)
 
-            csv = df.to_csv(index=False).encode("utf-8")
-            st.download_button(
-                "📥 Download CSV", csv, "youtube_ai_replies.csv", "text/csv"
+            df = pd.DataFrame(
+                {"Comment": comments, "Sentiment": sentiments, "AI Reply": replies}
             )
 
-        except Exception as e:
-            st.error(f"❌ Error: {str(e)}")
+            st.dataframe(df)
+
+            # Sentiment Pie Chart
+            sentiment_counts = df["Sentiment"].value_counts()
+            fig, ax = plt.subplots()
+            ax.pie(
+                sentiment_counts,
+                labels=sentiment_counts.index,
+                autopct="%1.1f%%",
+                startangle=90,
+            )
+            ax.axis("equal")
+            st.pyplot(fig)
+
+            # CSV Download
+            csv = df.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                "📁 Download CSV", csv, "comments_ai_replies.csv", "text/csv"
+            )
+
+        else:
+            st.warning("⚠️ No comments found.")
+
+    except Exception as e:
+        st.error(f"❌ Exception: {str(e)}")
