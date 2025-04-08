@@ -1,7 +1,7 @@
 import streamlit as st
 from yt_dlp import YoutubeDL
 from youtube_comment_downloader import YoutubeCommentDownloader
-from transformers import pipeline
+from transformers import pipeline, set_seed
 from textblob import TextBlob
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -27,10 +27,12 @@ if st.button("✨ Generate AI Replies") and url:
 
         with st.spinner("🔍 Fetching comments..."):
             downloader = YoutubeCommentDownloader()
-            comments_gen = downloader.get_comments_from_url(url, sort_by=0)
+            comments_gen = downloader.get_comments_from_url(
+                url
+            )  # FIXED: removed sort_by
             comments = []
             for i, comment in enumerate(comments_gen):
-                if i >= num_comments:
+                if i >= int(num_comments):
                     break
                 comments.append(comment["text"])
 
@@ -38,6 +40,7 @@ if st.button("✨ Generate AI Replies") and url:
             st.success("✅ Comments fetched. Generating replies...")
 
             reply_model = pipeline("text-generation", model="distilgpt2")
+            set_seed(42)
             replies = []
             sentiments = []
 
@@ -49,14 +52,17 @@ if st.button("✨ Generate AI Replies") and url:
                         if sentiment_score > 0
                         else "Negative" if sentiment_score < 0 else "Neutral"
                     )
-                except Exception as e:
-                    sentiment_score = 0
+                except:
                     label = "Neutral"
 
-                reply = reply_model(
-                    f"Reply to: {comment}\n", max_length=50, num_return_sequences=1
-                )[0]["generated_text"]
-                replies.append(reply.strip())
+                prompt = f'Reply to this YouTube comment in a fun, clever and uplifting way: "{comment}"\n'
+                response = reply_model(prompt, max_length=60, num_return_sequences=1)[
+                    0
+                ]["generated_text"]
+                clean_reply = (
+                    response.replace(prompt.strip(), "").strip().split("\n")[0]
+                )
+                replies.append(clean_reply)
                 sentiments.append(label)
 
             df = pd.DataFrame(
