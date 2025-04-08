@@ -1,6 +1,9 @@
+# requirements.txt
 streamlit
-google-api-python-client
+pytube
 transformers
-textblob
-pandas
 torch
+pandas
+textblob
+plotly
+youtube-comment-downloader
