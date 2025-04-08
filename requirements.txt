@@ -1,9 +1,7 @@
-# requirements.txt
 streamlit
 pytube
 transformers
 torch
 pandas
-textblob
 plotly
 youtube-comment-downloader
