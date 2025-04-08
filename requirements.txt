@@ -1,7 +1,8 @@
 streamlit
-pytube
+yt-dlp
+youtube-comment-downloader
 transformers
 torch
+textblob
 pandas
-plotly
-youtube-comment-downloader
+matplotlib
