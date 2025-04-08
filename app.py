@@ -11,7 +11,7 @@ st.set_page_config(page_title="YouTube Comment AI Replier", layout="centered")
 st.markdown("## 🤖 YouTube Comment AI Replier")
 
 url = st.text_input("📽️ Enter YouTube Video URL or Video ID", "")
-num_comments = st.slider("💬 Number of Comments", 5, 50, 10)
+num_comments = int(st.slider("💬 Number of Comments", 5, 50, 10))
 
 if st.button("✨ Generate AI Replies") and url:
     try:
@@ -27,12 +27,10 @@ if st.button("✨ Generate AI Replies") and url:
 
         with st.spinner("🔍 Fetching comments..."):
             downloader = YoutubeCommentDownloader()
-            comments_gen = downloader.get_comments_from_url(
-                url
-            )  # FIXED: removed sort_by
+            comments_gen = downloader.get_comments_from_url(url)
             comments = []
             for i, comment in enumerate(comments_gen):
-                if i >= int(num_comments):
+                if i >= num_comments:
                     break
                 comments.append(comment["text"])
 
@@ -52,16 +50,15 @@ if st.button("✨ Generate AI Replies") and url:
                         if sentiment_score > 0
                         else "Negative" if sentiment_score < 0 else "Neutral"
                     )
-                except:
+                except Exception:
+                    sentiment_score = 0
                     label = "Neutral"
 
-                prompt = f'Reply to this YouTube comment in a fun, clever and uplifting way: "{comment}"\n'
-                response = reply_model(prompt, max_length=60, num_return_sequences=1)[
+                prompt = f'Reply to this YouTube comment in a fun, lighthearted, and satisfying way: "{comment}"\n'
+                reply = reply_model(prompt, max_new_tokens=60, num_return_sequences=1)[
                     0
                 ]["generated_text"]
-                clean_reply = (
-                    response.replace(prompt.strip(), "").strip().split("\n")[0]
-                )
+                clean_reply = reply.replace(prompt.strip(), "").strip().split("\n")[0]
                 replies.append(clean_reply)
                 sentiments.append(label)
 
@@ -71,7 +68,6 @@ if st.button("✨ Generate AI Replies") and url:
 
             st.dataframe(df)
 
-            # Sentiment Pie Chart
             sentiment_counts = df["Sentiment"].value_counts()
             fig, ax = plt.subplots()
             ax.pie(
@@ -83,7 +79,6 @@ if st.button("✨ Generate AI Replies") and url:
             ax.axis("equal")
             st.pyplot(fig)
 
-            # CSV Download
             csv = df.to_csv(index=False).encode("utf-8")
             st.download_button(
                 "📁 Download CSV", csv, "comments_ai_replies.csv", "text/csv"
