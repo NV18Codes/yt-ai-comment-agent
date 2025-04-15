@@ -33,20 +33,19 @@ def load_lottieurl(url):
         return r.json()
     except:
         return None
-
 def safe_detect_language(text):
     try:
         if not text or len(text.strip()) < 3:
             return 'en'
-
         # Check for emoji-only text
         if all(char in emoji.EMOJI_DATA for char in text.strip()):
             return 'emoji'
 
         # Manually checking for language patterns (for Indian languages like Kannada, Telugu, Tamil)
         # Simple keywords to detect these languages
+        #basic words in indian language
         indian_keywords = {
-            'hi': ['kaise', 'kya', 'aap', 'hai', 'kar', 'ho', 'pyar', 'dost'],
+            'hi': ['kaise', 'kya', 'aap', 'hai', 'kar', 'ho', 'pyar', 'dost', 'suno'],
             'kn': ['ಹೇಗಿದೆ', 'ನೀವು', 'ಅವನು', 'ಇದು', 'ಪ್ರೀತಿ'],
             'te': ['ఏంటి', 'నేను', 'మీరు', 'అది', 'ప్రేమ'],
             'ta': ['எப்படி', 'நீங்கள்', 'அது', 'காதல்', 'பொறுப்பு'],
