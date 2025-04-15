@@ -43,8 +43,9 @@ def safe_detect_language(text):
 
         # Manually checking for language patterns (for Indian languages like Kannada, Telugu, Tamil)
         # Simple keywords to detect these languages
+        #basic words in indian language
         indian_keywords = {
-            'hi': ['kaise', 'kya', 'aap', 'hai', 'kar', 'ho', 'pyar', 'dost'],
+            'hi': ['kaise', 'kya', 'aap', 'hai', 'kar', 'ho', 'pyar', 'dost', 'suno'],
             'kn': ['ಹೇಗಿದೆ', 'ನೀವು', 'ಅವನು', 'ಇದು', 'ಪ್ರೀತಿ'],
             'te': ['ఏంటి', 'నేను', 'మీరు', 'అది', 'ప్రేమ'],
             'ta': ['எப்படி', 'நீங்கள்', 'அது', 'காதல்', 'பொறுப்பு'],
