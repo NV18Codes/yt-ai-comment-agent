@@ -33,12 +33,10 @@ def load_lottieurl(url):
         return r.json()
     except:
         return None
-
 def safe_detect_language(text):
     try:
         if not text or len(text.strip()) < 3:
             return 'en'
-
         # Check for emoji-only text
         if all(char in emoji.EMOJI_DATA for char in text.strip()):
             return 'emoji'
