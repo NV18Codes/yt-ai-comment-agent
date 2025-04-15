@@ -14,7 +14,11 @@ from dotenv import load_dotenv
 from youtube_comment_downloader import YoutubeCommentDownloader
 from yt_dlp import YoutubeDL
 import requests
+import openai
+import streamlit as st
 
+# Access the secret
+openai.api_key = st.secrets["openai"]["api_key"]
 # --- Setup ---
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
