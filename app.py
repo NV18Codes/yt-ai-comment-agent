@@ -19,7 +19,9 @@ import requests
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 set_seed(42)
-sentiment_analyzer = pipeline("sentiment-analysis", device=-1)
+
+# --- Fix: Use CPU for sentiment analysis ---
+sentiment_analyzer = pipeline("sentiment-analysis", device=0)  # Use CPU
 
 # --- Allowed Languages ---
 allowed_languages = ['en', 'hi', 'kn', 'te', 'ta', 'ko', 'ja']
@@ -33,6 +35,7 @@ def load_lottieurl(url):
         return r.json()
     except:
         return None
+
 def safe_detect_language(text):
     try:
         if not text or len(text.strip()) < 3:
