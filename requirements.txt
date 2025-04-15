@@ -1,0 +1,15 @@
+streamlit
+streamlit-lottie
+deep-translator
+langid
+langdetect
+emoji
+transformers
+openai
+python-dotenv
+youtube-comment-downloader
+yt-dlp
+matplotlib
+seaborn
+pandas
+requests
