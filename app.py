@@ -14,18 +14,18 @@ from dotenv import load_dotenv
 from youtube_comment_downloader import YoutubeCommentDownloader
 from yt_dlp import YoutubeDL
 import requests
-import openai
-import streamlit as st
 
-# Access the secret
-openai.api_key = st.secrets["openai"]["api_key"]
-# --- Setup ---
+# Load environment variables
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# Access the OpenAI API Key from Streamlit secrets
+openai.api_key = st.secrets["openai"]["api_key"]
+
+# --- Setup ---
 set_seed(42)
 
-# --- Fix: Use CPU for sentiment analysis ---
-sentiment_analyzer = pipeline("sentiment-analysis", device=0)  # Use CPU
+# Fix for sentiment analysis (using CPU if GPU is not available)
+sentiment_analyzer = pipeline("sentiment-analysis", device=-1)  # -1 for CPU (0 for GPU)
 
 # --- Allowed Languages ---
 allowed_languages = ['en', 'hi', 'kn', 'te', 'ta', 'ko', 'ja']
@@ -37,7 +37,8 @@ def load_lottieurl(url):
         if r.status_code != 200:
             return None
         return r.json()
-    except:
+    except Exception as e:
+        st.error(f"Error loading Lottie URL: {str(e)}")
         return None
 
 def safe_detect_language(text):
@@ -49,8 +50,6 @@ def safe_detect_language(text):
             return 'emoji'
 
         # Manually checking for language patterns (for Indian languages like Kannada, Telugu, Tamil)
-        # Simple keywords to detect these languages
-        #basic words in indian language
         indian_keywords = {
             'hi': ['kaise', 'kya', 'aap', 'hai', 'kar', 'ho', 'pyar', 'dost', 'suno'],
             'kn': ['ಹೇಗಿದೆ', 'ನೀವು', 'ಅವನು', 'ಇದು', 'ಪ್ರೀತಿ'],
@@ -59,12 +58,12 @@ def safe_detect_language(text):
             'ko': ['어떻게', '너', '그것', '사랑'],
             'ja': ['どう', 'あなた', 'それ', '愛'],
         }
-        
+
         # Check if the comment contains keywords from any language
         for lang, keywords in indian_keywords.items():
             if any(keyword in text.lower() for keyword in keywords):
                 return lang
-        
+
         # Use langdetect to detect the language
         lang = detect(text)
         if lang in allowed_languages:
@@ -77,14 +76,11 @@ def safe_detect_language(text):
 def detect_tone(text):
     if not text:
         return "Neutral"
-
     text_lower = text.lower().strip()
     if all(char in emoji.EMOJI_DATA for char in text.strip()):
         return "Emoji"
-
     if re.search(r"\b\d{1,2}:\d{2}\b", text_lower):
         return "Timestamp"
-
     if re.search(r"\b(19|20)\d{2}\b", text_lower):
         return "Year"
 
@@ -109,7 +105,8 @@ def detect_sentiment(text):
             return "Neutral"
         result = sentiment_analyzer(text)[0]
         return result['label'].capitalize()
-    except:
+    except Exception as e:
+        st.error(f"Error during sentiment analysis: {str(e)}")
         return "Neutral"
 
 def translate_to_english(text):
@@ -117,7 +114,8 @@ def translate_to_english(text):
         if not text:
             return text
         return GoogleTranslator(source='auto', target='en').translate(text)
-    except:
+    except Exception as e:
+        st.error(f"Error during translation to English: {str(e)}")
         return text
 
 def translate_back(reply, lang):
@@ -125,7 +123,8 @@ def translate_back(reply, lang):
         if lang in allowed_languages and lang != 'en':
             return GoogleTranslator(source='en', target=lang).translate(reply)
         return reply
-    except:
+    except Exception as e:
+        st.error(f"Error during translation back: {str(e)}")
         return reply
 
 def generate_reply(comment, model="gpt-4", video_title=""):
@@ -168,7 +167,8 @@ Reply:"""
         )
         reply = response.choices[0].message['content'].strip()
         return emoji.emojize(reply, language='alias')
-    except:
+    except Exception as e:
+        st.error(f"Error generating reply: {str(e)}")
         return "Thanks for your feedback! 👍"
 
 # --- Streamlit App ---
